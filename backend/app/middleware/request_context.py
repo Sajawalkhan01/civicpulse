@@ -1,0 +1,44 @@
+import logging
+import time
+import uuid
+
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
+
+from app.logging_config import request_id_var
+
+logger = logging.getLogger("civicpulse.access")
+
+
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Assigns/propagates X-Request-ID and logs one access line per request.
+
+    Every log line emitted while a request is in flight (by this middleware
+    or by application code further down the stack) picks up the same
+    request_id via the RequestIdFilter reading the contextvar set here.
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        incoming_id = request.headers.get("X-Request-ID")
+        request_id = incoming_id or str(uuid.uuid4())
+        token = request_id_var.set(request_id)
+        request.state.request_id = request_id
+
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+            duration_ms = (time.perf_counter() - started) * 1000
+            response.headers["X-Request-ID"] = request_id
+            logger.info(
+                "request completed",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": response.status_code,
+                    "duration_ms": round(duration_ms, 2),
+                },
+            )
+            return response
+        finally:
+            request_id_var.reset(token)

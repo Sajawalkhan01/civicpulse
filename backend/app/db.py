@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
+from typing import Iterator
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # Loads backend/.env if present (never overrides real env vars already set,
 # e.g. in prod/CI). A no-op if the file doesn't exist.
@@ -31,3 +32,12 @@ class Base(DeclarativeBase):
 
 engine = create_engine(get_database_url(), pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def get_session() -> Iterator[Session]:
+    """FastAPI dependency: one session per request, always closed after."""
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

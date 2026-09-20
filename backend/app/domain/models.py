@@ -1,6 +1,7 @@
 from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import Category, Priority, Status
 
@@ -19,7 +20,9 @@ class ComplaintCreate(BaseModel):
 
 
 class ComplaintOut(BaseModel):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
     text: str
     location: str
     reporter_contact: str | None
@@ -31,6 +34,11 @@ class ComplaintOut(BaseModel):
     triage_latency_ms: int | None
     created_at: datetime
     updated_at: datetime
+
+
+class ComplaintListOut(BaseModel):
+    items: list[ComplaintOut]
+    total: int
 
 
 class StatusUpdate(BaseModel):

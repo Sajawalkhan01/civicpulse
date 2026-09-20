@@ -8,10 +8,8 @@ or sqlite fallback is used here.
 import uuid
 
 import pytest
-from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
-from app.db import get_database_url
 from app.domain.enums import Category, Priority, Status
 from app.models import Complaint
 from app.repositories.complaints import (
@@ -21,20 +19,7 @@ from app.repositories.complaints import (
 )
 from scripts.seed import seed as run_seed
 
-
-@pytest.fixture(scope="session")
-def engine():
-    eng = create_engine(get_database_url())
-    # Schema comes only from `alembic upgrade head` (per CLAUDE.md, no
-    # CREATE TABLE outside the migration) — fail with a clear message
-    # instead of a raw Postgres error if it hasn't been applied yet.
-    if not inspect(eng).has_table("complaints"):
-        pytest.fail(
-            "The 'complaints' table does not exist on DATABASE_URL. "
-            "Run `alembic upgrade head` against the test database first."
-        )
-    yield eng
-    eng.dispose()
+# `engine` fixture comes from tests/conftest.py (shared with test_routes.py).
 
 
 @pytest.fixture
