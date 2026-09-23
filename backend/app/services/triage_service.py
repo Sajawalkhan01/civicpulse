@@ -7,10 +7,10 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass, field
-from typing import Protocol
 
 from app.domain.models import TriageResult
-from app.domain.protocols import TriageProvider
+from app.domain.protocols import Cache, TriageProvider
+from app.providers.cache.factory import get_cache
 from app.providers.triage.factory import get_triage_provider
 from app.providers.triage.rules import RuleBasedTriage
 from app.providers.triage.base import RetryableTriageError
@@ -18,31 +18,6 @@ from app.providers.triage.base import RetryableTriageError
 logger = logging.getLogger("civicpulse.triage")
 
 _CACHE_TTL_SECONDS = 24 * 60 * 60
-
-
-class Cache(Protocol):
-    def get(self, key: str) -> object | None: ...
-    def set(self, key: str, value: object, ttl_seconds: float) -> None: ...
-
-
-@dataclass
-class InMemoryCache:
-    """TTL cache for triage outcomes. A Redis-backed Cache comes next chunk."""
-
-    _store: dict[str, tuple[float, object]] = field(default_factory=dict)
-
-    def get(self, key: str) -> object | None:
-        entry = self._store.get(key)
-        if entry is None:
-            return None
-        expires_at, value = entry
-        if time.monotonic() >= expires_at:
-            del self._store[key]
-            return None
-        return value
-
-    def set(self, key: str, value: object, ttl_seconds: float) -> None:
-        self._store[key] = (time.monotonic() + ttl_seconds, value)
 
 
 @dataclass
@@ -70,7 +45,7 @@ class TriageService:
     ) -> None:
         self._provider = provider
         self._fallback = RuleBasedTriage()
-        self._cache = cache if cache is not None else InMemoryCache()
+        self._cache = cache if cache is not None else get_cache()
         self._timeout_seconds = timeout_seconds
         self._retry_delay_range = retry_delay_range
         self._outcomes: deque[TriageOutcome] = deque(maxlen=ring_buffer_size)
