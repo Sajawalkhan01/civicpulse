@@ -1,36 +1,36 @@
-import time
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
 from app.domain.enums import Category, Priority, Status
 from app.domain.models import ComplaintCreate
-from app.domain.protocols import TriageProvider
 from app.domain.state_machine import validate_transition
 from app.models import Complaint
 from app.repositories.complaints import ComplaintNotFoundError, ComplaintRepository, NewComplaint
-from app.services.triage_stub import StubTriageProvider
-
-# TODO(next chunk): swap this for the real TriageProvider (providers/triage/).
-_triage_provider: TriageProvider = StubTriageProvider()
+from app.services.triage_service import triage_service
 
 
 def create_complaint(session: Session, data: ComplaintCreate) -> Complaint:
-    started = time.perf_counter()
-    triage = _triage_provider.triage(data.text, data.location)
-    latency_ms = int((time.perf_counter() - started) * 1000)
+    # Generated up front (rather than after insert) so the triage service has
+    # a complaint id to put in its failure-fallback warning log.
+    complaint_id = uuid4()
+    result, triaged_by, latency_ms = triage_service.triage(complaint_id, data.text, data.location)
 
     new_complaint = NewComplaint(
         text=data.text,
         location=data.location,
         reporter_contact=data.reporter_contact,
-        category=triage.category,
-        priority=triage.priority,
-        ai_summary=triage.summary,
-        triaged_by=_triage_provider.name,
+        category=result.category,
+        priority=result.priority,
+        ai_summary=result.summary,
+        triaged_by=triaged_by,
         triage_latency_ms=latency_ms,
     )
-    return ComplaintRepository(session).create(new_complaint)
+    repo = ComplaintRepository(session)
+    repo.create_with_id(complaint_id, new_complaint)
+    complaint = repo.get_by_id(complaint_id)
+    assert complaint is not None
+    return complaint
 
 
 def get_complaint(session: Session, complaint_id: UUID) -> Complaint:
