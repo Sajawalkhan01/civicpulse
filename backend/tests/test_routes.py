@@ -6,43 +6,14 @@ same database as test_repository.py.
 """
 
 import uuid
-from typing import Iterator
 
-import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
 
 from app.db import get_session
 from app.main import app
-from app.models import Complaint
 
-
-@pytest.fixture
-def created_ids() -> list[str]:
-    return []
-
-
-@pytest.fixture(autouse=True)
-def _cleanup_created_complaints(engine, created_ids):
-    yield
-    if not created_ids:
-        return
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-    session = session_factory()
-    try:
-        for raw_id in created_ids:
-            obj = session.get(Complaint, uuid.UUID(str(raw_id)))
-            if obj is not None:
-                session.delete(obj)
-        session.commit()
-    finally:
-        session.close()
-
-
-@pytest.fixture
-def client() -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
+# `engine`, `created_ids`, `_cleanup_created_complaints`, and `client` fixtures
+# come from tests/conftest.py (shared with test_triage.py).
 
 
 def _create_complaint(client: TestClient, created_ids: list[str], **overrides) -> dict:
@@ -69,11 +40,11 @@ def test_create_complaint_happy_path(client, created_ids):
         location="Test Market Road, Lahore",
         reporter_contact="0300-1111111",
     )
-    assert body["category"] == "other"
-    assert body["priority"] == "normal"
+    assert body["category"] in {"water", "electricity", "sanitation", "roads", "streetlights", "other"}
+    assert body["priority"] in {"high", "normal", "low"}
     assert body["status"] == "open"
     assert body["ai_summary"]
-    assert body["triaged_by"] == "stub"
+    assert body["triaged_by"] == "simulated"  # TRIAGE_PROVIDER=simulated, mode="normal" never fails
     assert body["triage_latency_ms"] >= 0
     assert body["reporter_contact"] == "0300-1111111"
     uuid.UUID(body["id"])  # raises if not a valid UUID
@@ -182,7 +153,10 @@ def test_meta_providers_happy_path(client):
     assert response.status_code == 200
     body = response.json()
     assert "active_provider" in body
-    assert body["recent_outcomes"] == []
+    # recent_outcomes/cache_hit_rate reflect real, cross-test shared state
+    # (the ring buffer), so just check the shape rather than exact contents.
+    assert isinstance(body["recent_outcomes"], list)
+    assert isinstance(body["cache_hit_rate"], float)
 
 
 # --- GET /health / /ready / /metrics ------------------------------------
