@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------- */
+/* Semantic design tokens. Defined as plain CSS custom properties (not     */
+/* inside @theme) so the SAME token name can hold a different value under  */
+/* .dark -- @theme values are static, but a var() indirection lets Tailwind */
+/* utilities like `bg-background` react to the class on <html> at runtime. */
+/* ---------------------------------------------------------------------- */
+:root {
+  --background: #dde7e0;
+  --surface: #ffffff;
+  --surface-2: #d9e3db;
+  --foreground: #14261d;
+  --muted-foreground: #55685c;
+  --border: #cfdacf;
+  --border-strong: #b7c7b8;
+
+  --primary: #1b4d3e;
+  --primary-foreground: #f3faf6;
+  --primary-hover: #163f33;
+
+  /* Fixed dark-green accent panel (Home's feature cards) -- deliberately a
+     separate token from --primary. --primary inverts to a bright mint in
+     dark mode (correct for a button/link color, which needs to pop against
+     a dark page), but the feature cards are meant to always read as "the
+     dark green card" contrasted against the page background, not as
+     "whatever the current primary action color is". */
+  --feature-card: #1b4d3e;
+  --feature-card-foreground: #f3faf6;
+
+  --accent: #e08a1e;
+  --accent-foreground: #241300;
+
+  --success: #1a7f4e;
+  --success-bg: #e4f6ec;
+  --warning: #a2660a;
+  --warning-bg: #fbecd2;
+  --danger: #b3311f;
+  --danger-bg: #fbe6e2;
+  --info: #2158a6;
+  --info-bg: #e5eefb;
+
+  --ring: #1b4d3e;
+}
+
+.dark {
+  --background: #0e1913;
+  --surface: #15241c;
+  --surface-2: #1c2e23;
+  --foreground: #e9f2ec;
+  --muted-foreground: #90a79a;
+  --border: #26392e;
+  --border-strong: #33493b;
+
+  --primary: #5fcb98;
+  --primary-foreground: #07160f;
+  --primary-hover: #77d8aa;
+
+  /* Lighter than the near-black dark-mode background so it still reads as a
+     distinct raised green panel, the same way #1b4d3e reads as distinctly
+     darker than the light sage background -- inverted relative to its own
+     surroundings rather than reusing --primary's inversion. */
+  --feature-card: #245544;
+  --feature-card-foreground: #eefbf4;
+
+  --accent: #f3a53f;
+  --accent-foreground: #251400;
+
+  --success: #4fd694;
+  --success-bg: #113626;
+  --warning: #f0c069;
+  --warning-bg: #3a2c0d;
+  --danger: #f28f7f;
+  --danger-bg: #3a1912;
+  --info: #7fb0f0;
+  --info-bg: #122642;
+
+  --ring: #5fcb98;
+}
+
+@theme {
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-feature-card: var(--feature-card);
+  --color-feature-card-foreground: var(--feature-card-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Sonner toasts already slide in from their corner by default; this adds a
+   shrinking progress bar synced to Sonner's default 4s auto-dismiss timer
+   (toastOptions.duration isn't overridden in App.tsx, so 4s is accurate). */
+.toast-progress {
+  position: relative;
+  overflow: hidden;
+}
+.toast-progress::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-primary);
+  animation: toast-progress-shrink 4s linear forwards;
+  transform-origin: left;
+}
+.toast-progress[data-type="error"]::after {
+  background: var(--color-danger);
+}
+.toast-progress[data-type="success"]::after {
+  background: var(--color-success);
+}
+@keyframes toast-progress-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-progress::after {
+    animation: none;
+  }
+}
+
+/* Home page decorative helpers -- all driven by the existing design tokens
+   so they follow light/dark automatically, no separate dark-mode overrides
+   needed. */
+.glass-panel {
+  background: color-mix(in srgb, var(--color-surface-2) 78%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border);
+}
+
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-primary) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 14%, transparent) 1px, transparent 1px);
+}
+
+.glow-effect {
+  box-shadow: 0 0 50px -10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes shine {
+  100% {
+    left: 125%;
+  }
+}
+.animate-shine {
+  animation: shine 1.1s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-shine {
+    animation: none;
+  }
+}
