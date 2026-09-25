@@ -12,6 +12,9 @@ RUN npm run build
 # Stage 2: Serve static files with unprivileged Nginx
 FROM nginx:1.27-alpine AS runtime
 
+# Upgrade base packages to patch security advisories
+RUN apk update && apk upgrade --no-cache
+
 # Remove default nginx configs and html
 RUN rm -rf /etc/nginx/conf.d /usr/share/nginx/html/*
 

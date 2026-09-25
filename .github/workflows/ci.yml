@@ -252,11 +252,11 @@ jobs:
       - name: Check X-Cache goes MISS then HIT on /api/stats
         run: |
           # First fetch should be MISS
-          CACHE_1=$(curl -sI http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
+          CACHE_1=$(curl -s -i http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
           echo "First response cache header: $CACHE_1"
           
           # Second fetch should be HIT
-          CACHE_2=$(curl -sI http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
+          CACHE_2=$(curl -s -i http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
           echo "Second response cache header: $CACHE_2"
           echo "$CACHE_2" | grep -i "HIT"
 
