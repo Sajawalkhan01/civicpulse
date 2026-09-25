@@ -1,4 +1,9 @@
 import os
+import sys
+from pathlib import Path
+
+# Ensure backend directory is in sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Tests must never depend on, or be silently overridden by, whatever happens
 # to be in the ambient shell environment (e.g. a developer's TRIAGE_PROVIDER=
