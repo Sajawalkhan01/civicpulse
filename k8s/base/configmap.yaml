@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: civicpulse-config
+  namespace: civicpulse
+data:
+  TRIAGE_PROVIDER: "simulated"
+  GROQ_MODEL: "openai/gpt-oss-20b"
+  OLLAMA_BASE_URL: "http://ollama:11434"
+  OLLAMA_MODEL: "llama3.2:1b"
+  RATE_LIMIT_PER_MINUTE: "60"
+  CORS_ORIGINS: "*"
+  LOG_LEVEL: "INFO"
+  POSTGRES_DB: "civicpulse"
+  POSTGRES_USER: "civicpulse"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://redis:6379/0"

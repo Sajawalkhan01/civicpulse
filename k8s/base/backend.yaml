@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: civicpulse
+  labels:
+    app: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: civicpulse
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: backend
+          image: ghcr.io/sajawalkhan01/civicpulse-backend:dev
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: civicpulse-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: REDIS_URL
+            - name: TRIAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: TRIAGE_PROVIDER
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: civicpulse-secrets
+                  key: GROQ_API_KEY
+            - name: GROQ_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: GROQ_MODEL
+            - name: OLLAMA_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: OLLAMA_BASE_URL
+            - name: OLLAMA_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: OLLAMA_MODEL
+            - name: RATE_LIMIT_PER_MINUTE
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: RATE_LIMIT_PER_MINUTE
+            - name: CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: CORS_ORIGINS
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: civicpulse-config
+                  key: LOG_LEVEL
+          command:
+            - sh
+            - -c
+            - "alembic upgrade head && python scripts/seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 3
