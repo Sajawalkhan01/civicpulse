@@ -19,6 +19,7 @@ coverage.xml
 # Node / frontend
 node_modules/
 dist/
+*.tsbuildinfo
 
 # OS
 .DS_Store

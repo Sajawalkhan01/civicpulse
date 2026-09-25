@@ -10,6 +10,7 @@ from app.db import engine
 from app.domain.state_machine import InvalidTransitionError
 from app.logging_config import configure_logging
 from app.middleware.metrics import PrometheusMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.repositories.complaints import ComplaintNotFoundError
 from app.routes import complaints, health, meta, observability, readiness, stats
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(PrometheusMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(RequestValidationError)

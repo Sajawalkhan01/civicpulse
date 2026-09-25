@@ -11,6 +11,7 @@ tests is negligible.
 from uuid import uuid4
 
 import app.services.complaints as complaints_service
+from app.providers.cache.in_memory_cache import InMemoryCache
 from app.providers.triage.base import NonRetryableTriageError, RetryableTriageError
 from app.providers.triage.simulated import SimulatedTriage
 from app.services.triage_service import TriageService
@@ -19,6 +20,13 @@ _FAST_RETRY_RANGE = (0.0, 0.001)
 
 
 def _fast_service(provider: SimulatedTriage, **kwargs) -> TriageService:
+    # A fresh InMemoryCache per test (unless the test passes its own) --
+    # these are unit tests of retry/timeout/cache-hit *behavior*, so each one
+    # needs its own isolated cache rather than sharing whatever backend
+    # get_cache() resolves to by default (RedisCache against a real, shared,
+    # long-TTL Redis once REDIS_URL is set), which would let one test's
+    # cached result leak into another test that reuses the same text.
+    kwargs.setdefault("cache", InMemoryCache())
     return TriageService(provider=provider, retry_delay_range=_FAST_RETRY_RANGE, timeout_seconds=1.0, **kwargs)
 
 
@@ -85,7 +93,9 @@ def test_hard_timeout_is_treated_as_retryable():
     # Provider "takes" 0.05s; service only waits 0.01s, so this exercises the
     # real ThreadPoolExecutor timeout path rather than a hand-raised error.
     provider = SimulatedTriage(mode="timeout", timeout_seconds=0.05)
-    service = TriageService(provider=provider, retry_delay_range=_FAST_RETRY_RANGE, timeout_seconds=0.01)
+    service = TriageService(
+        provider=provider, retry_delay_range=_FAST_RETRY_RANGE, timeout_seconds=0.01, cache=InMemoryCache()
+    )
 
     _, triaged_by, _ = service.triage(uuid4(), "some complaint text about a broken pipe", "Loc")
 

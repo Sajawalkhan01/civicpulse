@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_session
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api", tags=["stats"])
 
 
 @router.get("/stats")
-def get_stats(session: Session = Depends(get_session)) -> dict:
-    # TODO(redis chunk): cache this response in Redis; computed live from
-    # Postgres for now.
-    return complaints_service.get_stats(session)
+def get_stats(response: Response, session: Session = Depends(get_session)) -> dict:
+    stats, cache_hit = complaints_service.get_stats_cached(session)
+    response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
+    return stats
