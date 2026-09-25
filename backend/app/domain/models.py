@@ -14,9 +14,10 @@ class TriageResult(BaseModel):
 
 
 class ComplaintCreate(BaseModel):
-    text: str = Field(min_length=10, max_length=2000)
-    location: str = Field(min_length=3, max_length=200)
-    reporter_contact: str | None = None
+    """Citizen complaint payload submitted via public web intake form."""
+    text: str = Field(min_length=10, max_length=2000, description="Raw complaint narrative in English or Urdu-English")
+    location: str = Field(min_length=3, max_length=200, description="Civic geographic location description")
+    reporter_contact: str | None = Field(default=None, description="Optional phone or email address for citizen follow-up")
 
 
 class ComplaintOut(BaseModel):
