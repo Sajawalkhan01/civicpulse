@@ -15,6 +15,7 @@ jobs:
     env:
       TRIAGE_PROVIDER: "simulated"
       DATABASE_URL: "sqlite:///:memory:"
+      PYTHONPATH: "backend"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          pytest --cov=app --cov-fail-under=65 tests/
+          python -m pytest --cov=app --cov-fail-under=65 tests/
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
