@@ -50,11 +50,15 @@ def test_exceeding_limit_returns_429_with_retry_after(client, created_ids, small
 
     try:
         for _ in range(_TEST_LIMIT):
-            response = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+            response = client.post(
+                "/api/complaints", json=_complaint_payload(), headers=headers
+            )
             assert response.status_code == 201, response.text
             created_ids.append(response.json()["id"])
 
-        limited = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+        limited = client.post(
+            "/api/complaints", json=_complaint_payload(), headers=headers
+        )
         assert limited.status_code == 429
         retry_after = int(limited.headers["retry-after"])
         assert 0 < retry_after <= _TEST_WINDOW_SECONDS
@@ -69,16 +73,22 @@ def test_requests_allowed_again_after_window_passes(client, created_ids, small_l
 
     try:
         for _ in range(_TEST_LIMIT):
-            response = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+            response = client.post(
+                "/api/complaints", json=_complaint_payload(), headers=headers
+            )
             assert response.status_code == 201, response.text
             created_ids.append(response.json()["id"])
 
-        limited = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+        limited = client.post(
+            "/api/complaints", json=_complaint_payload(), headers=headers
+        )
         assert limited.status_code == 429
 
         time.sleep(_TEST_WINDOW_SECONDS + 1)
 
-        recovered = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+        recovered = client.post(
+            "/api/complaints", json=_complaint_payload(), headers=headers
+        )
         assert recovered.status_code == 201, recovered.text
         created_ids.append(recovered.json()["id"])
     finally:
@@ -97,12 +107,16 @@ def test_only_the_last_forwarded_for_hop_is_trusted(client, created_ids, small_l
         for i in range(_TEST_LIMIT):
             spoofed_front = f"1.2.3.{i}"
             headers = {"X-Forwarded-For": f"{spoofed_front}, {real_ip}"}
-            response = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+            response = client.post(
+                "/api/complaints", json=_complaint_payload(), headers=headers
+            )
             assert response.status_code == 201, response.text
             created_ids.append(response.json()["id"])
 
         headers = {"X-Forwarded-For": f"9.9.9.9, {real_ip}"}
-        limited = client.post("/api/complaints", json=_complaint_payload(), headers=headers)
+        limited = client.post(
+            "/api/complaints", json=_complaint_payload(), headers=headers
+        )
         assert limited.status_code == 429
     finally:
         _flush_key(real_ip)

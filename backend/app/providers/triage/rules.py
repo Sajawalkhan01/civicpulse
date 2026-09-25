@@ -40,7 +40,9 @@ class RuleBasedTriage:
             category = _match_category(text)
             priority = _match_priority(text)
             summary = text.strip()[:140] or "No summary available"
-            return TriageResult(category=category, priority=priority, summary=summary, confidence=0.4)
+            return TriageResult(
+                category=category, priority=priority, summary=summary, confidence=0.4
+            )
         except Exception:
             # Must never raise: any unexpected input falls back to a safe,
             # always-valid result rather than propagating an exception.

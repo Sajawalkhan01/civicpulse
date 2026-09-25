@@ -53,7 +53,8 @@ class Complaint(Base):
             "char_length(text) BETWEEN 10 AND 2000", name="ck_complaints_text_length"
         ),
         sa.CheckConstraint(
-            "char_length(location) BETWEEN 3 AND 200", name="ck_complaints_location_length"
+            "char_length(location) BETWEEN 3 AND 200",
+            name="ck_complaints_location_length",
         ),
         sa.Index("ix_complaints_status_priority", "status", "priority"),
         sa.Index("ix_complaints_created_at", "created_at"),

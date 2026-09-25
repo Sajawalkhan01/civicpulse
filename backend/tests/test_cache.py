@@ -63,7 +63,9 @@ def test_stats_cache_is_invalidated_on_status_change(client, created_ids):
     still_cached = client.get("/api/stats")
     assert still_cached.headers["x-cache"] == "HIT"
 
-    status_response = client.patch(f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"})
+    status_response = client.patch(
+        f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"}
+    )
     assert status_response.status_code == 200
 
     after_update = client.get("/api/stats")

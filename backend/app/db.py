@@ -1,6 +1,6 @@
 import os
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine

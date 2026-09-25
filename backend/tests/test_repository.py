@@ -145,7 +145,9 @@ def test_list_paginates_a_known_slice(repo, session):
 def test_update_status_via_repository(repo, session):
     _, created_ids = session
     complaint = repo.create(
-        _new(text="Status update test complaint about a broken streetlight near the park")
+        _new(
+            text="Status update test complaint about a broken streetlight near the park"
+        )
     )
     created_ids.append(complaint.id)
     assert complaint.status == Status.OPEN

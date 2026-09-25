@@ -40,18 +40,29 @@ def test_create_complaint_happy_path(client, created_ids):
         location="Test Market Road, Lahore",
         reporter_contact="0300-1111111",
     )
-    assert body["category"] in {"water", "electricity", "sanitation", "roads", "streetlights", "other"}
+    assert body["category"] in {
+        "water",
+        "electricity",
+        "sanitation",
+        "roads",
+        "streetlights",
+        "other",
+    }
     assert body["priority"] in {"high", "normal", "low"}
     assert body["status"] == "open"
     assert body["ai_summary"]
-    assert body["triaged_by"] == "simulated"  # TRIAGE_PROVIDER=simulated, mode="normal" never fails
+    assert (
+        body["triaged_by"] == "simulated"
+    )  # TRIAGE_PROVIDER=simulated, mode="normal" never fails
     assert body["triage_latency_ms"] >= 0
     assert body["reporter_contact"] == "0300-1111111"
     uuid.UUID(body["id"])  # raises if not a valid UUID
 
 
 def test_create_complaint_returns_400_on_invalid_input(client):
-    response = client.post("/api/complaints", json={"text": "too short", "location": "X"})
+    response = client.post(
+        "/api/complaints", json={"text": "too short", "location": "X"}
+    )
     assert response.status_code == 400
     body = response.json()
     assert body["error"] == "validation_error"
@@ -85,7 +96,8 @@ def test_list_complaints_happy_path(client, created_ids):
     _create_complaint(client, created_ids, location=marker_location)
 
     response = client.get(
-        "/api/complaints", params={"category": "other", "priority": "normal", "page_size": 1}
+        "/api/complaints",
+        params={"category": "other", "priority": "normal", "page_size": 1},
     )
     assert response.status_code == 200
     body = response.json()
@@ -104,7 +116,9 @@ def test_list_complaints_rejects_page_size_over_100(client):
 
 def test_update_status_happy_path(client, created_ids):
     created = _create_complaint(client, created_ids)
-    response = client.patch(f"/api/complaints/{created['id']}/status", json={"status": "in_progress"})
+    response = client.patch(
+        f"/api/complaints/{created['id']}/status", json={"status": "in_progress"}
+    )
     assert response.status_code == 200
     assert response.json()["status"] == "in_progress"
 
@@ -113,12 +127,18 @@ def test_update_status_returns_409_on_illegal_transition(client, created_ids):
     created = _create_complaint(client, created_ids)
     complaint_id = created["id"]
 
-    first = client.patch(f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"})
+    first = client.patch(
+        f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"}
+    )
     assert first.status_code == 200
-    second = client.patch(f"/api/complaints/{complaint_id}/status", json={"status": "resolved"})
+    second = client.patch(
+        f"/api/complaints/{complaint_id}/status", json={"status": "resolved"}
+    )
     assert second.status_code == 200
 
-    third = client.patch(f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"})
+    third = client.patch(
+        f"/api/complaints/{complaint_id}/status", json={"status": "in_progress"}
+    )
     assert third.status_code == 409
     assert third.json() == {
         "error": "invalid_transition",
@@ -129,7 +149,9 @@ def test_update_status_returns_409_on_illegal_transition(client, created_ids):
 
 
 def test_update_status_returns_404_for_missing_complaint(client):
-    response = client.patch(f"/api/complaints/{uuid.uuid4()}/status", json={"status": "in_progress"})
+    response = client.patch(
+        f"/api/complaints/{uuid.uuid4()}/status", json={"status": "in_progress"}
+    )
     assert response.status_code == 404
 
 

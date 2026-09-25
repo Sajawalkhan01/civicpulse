@@ -11,6 +11,8 @@ router = APIRouter(prefix="/api", tags=["meta"])
 def get_providers() -> dict:
     return {
         "active_provider": triage_service.active_provider_name,
-        "recent_outcomes": [asdict(outcome) for outcome in triage_service.recent_outcomes],
+        "recent_outcomes": [
+            asdict(outcome) for outcome in triage_service.recent_outcomes
+        ],
         "cache_hit_rate": triage_service.cache_hit_rate,
     }

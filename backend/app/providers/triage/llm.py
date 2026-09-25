@@ -44,7 +44,9 @@ class LLMTriage:
             raise NonRetryableTriageError("GROQ_API_KEY is not set")
 
         self._model = model or os.environ.get("GROQ_MODEL") or _DEFAULT_MODEL
-        self._client = OpenAI(api_key=api_key, base_url=_GROQ_BASE_URL, timeout=timeout_seconds)
+        self._client = OpenAI(
+            api_key=api_key, base_url=_GROQ_BASE_URL, timeout=timeout_seconds
+        )
 
     def triage(self, text: str, location: str) -> TriageResult:
         try:
@@ -53,11 +55,16 @@ class LLMTriage:
                 response_format={"type": "json_object"},
                 messages=[
                     {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
-                    {"role": "user", "content": build_triage_user_prompt(text, location)},
+                    {
+                        "role": "user",
+                        "content": build_triage_user_prompt(text, location),
+                    },
                 ],
             )
         except (APITimeoutError, APIConnectionError, RateLimitError) as exc:
-            raise RetryableTriageError(f"Groq request failed: {type(exc).__name__}") from exc
+            raise RetryableTriageError(
+                f"Groq request failed: {type(exc).__name__}"
+            ) from exc
         except APIStatusError as exc:
             if exc.status_code >= 500:
                 raise RetryableTriageError(f"Groq returned {exc.status_code}") from exc

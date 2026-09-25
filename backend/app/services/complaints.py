@@ -7,7 +7,11 @@ from app.domain.models import ComplaintCreate
 from app.domain.state_machine import validate_transition
 from app.models import Complaint
 from app.providers.cache.factory import get_cache
-from app.repositories.complaints import ComplaintNotFoundError, ComplaintRepository, NewComplaint
+from app.repositories.complaints import (
+    ComplaintNotFoundError,
+    ComplaintRepository,
+    NewComplaint,
+)
 from app.services.triage_service import triage_service
 
 _STATS_CACHE_KEY = "stats:summary:v1"
@@ -20,7 +24,9 @@ def create_complaint(session: Session, data: ComplaintCreate) -> Complaint:
     # Generated up front (rather than after insert) so the triage service has
     # a complaint id to put in its failure-fallback warning log.
     complaint_id = uuid4()
-    result, triaged_by, latency_ms = triage_service.triage(complaint_id, data.text, data.location)
+    result, triaged_by, latency_ms = triage_service.triage(
+        complaint_id, data.text, data.location
+    )
 
     new_complaint = NewComplaint(
         text=data.text,
@@ -56,11 +62,17 @@ def list_complaints(
     page_size: int = 20,
 ) -> tuple[list[Complaint], int]:
     return ComplaintRepository(session).list(
-        category=category, priority=priority, status=status, page=page, page_size=page_size
+        category=category,
+        priority=priority,
+        status=status,
+        page=page,
+        page_size=page_size,
     )
 
 
-def update_complaint_status(session: Session, complaint_id: UUID, new_status: Status) -> Complaint:
+def update_complaint_status(
+    session: Session, complaint_id: UUID, new_status: Status
+) -> Complaint:
     """The one function allowed to move a complaint's status (CLAUDE.md state machine rule)."""
     repo = ComplaintRepository(session)
     complaint = repo.get_by_id(complaint_id)

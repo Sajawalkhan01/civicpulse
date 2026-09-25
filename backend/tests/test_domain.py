@@ -2,7 +2,11 @@ import pytest
 from pydantic import ValidationError
 
 from app.domain import Category, Priority, Status, TriageResult
-from app.domain.state_machine import InvalidTransitionError, can_transition, validate_transition
+from app.domain.state_machine import (
+    InvalidTransitionError,
+    can_transition,
+    validate_transition,
+)
 
 ALL_STATUSES = list(Status)
 
@@ -22,7 +26,12 @@ def test_legal_transitions_are_allowed(current, target):
 
 @pytest.mark.parametrize(
     "current,target",
-    [(c, t) for c in ALL_STATUSES for t in ALL_STATUSES if (c, t) not in LEGAL_TRANSITIONS],
+    [
+        (c, t)
+        for c in ALL_STATUSES
+        for t in ALL_STATUSES
+        if (c, t) not in LEGAL_TRANSITIONS
+    ],
 )
 def test_illegal_transitions_are_rejected(current, target):
     assert can_transition(current, target) is False

@@ -29,7 +29,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Applies the distributed Redis rate limiter to POST /api/complaints
     only -- every other route passes straight through."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         if request.method != _LIMITED_METHOD or request.url.path != _LIMITED_PATH:
             return await call_next(request)
 

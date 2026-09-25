@@ -19,7 +19,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     request_id via the RequestIdFilter reading the contextvar set here.
     """
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         incoming_id = request.headers.get("X-Request-ID")
         request_id = incoming_id or str(uuid.uuid4())
         token = request_id_var.set(request_id)

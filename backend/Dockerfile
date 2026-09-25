@@ -13,12 +13,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y setuptools
 
 # Stage 2: Final runtime image
 FROM python:3.12-slim AS runtime
 
 WORKDIR /app
+
+# Purge vulnerable base image vendor packages
+RUN rm -rf /usr/local/lib/python3.12/site-packages/*
 
 # Create unprivileged non-root user
 RUN groupadd -g 10001 appgroup && \

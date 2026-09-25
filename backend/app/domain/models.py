@@ -15,6 +15,7 @@ class TriageResult(BaseModel):
 
 class ComplaintCreate(BaseModel):
     """Citizen complaint payload submitted via public web intake form."""
+
     text: str = Field(
         ...,
         min_length=10,

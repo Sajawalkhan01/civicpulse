@@ -12,9 +12,33 @@ jobs:
   test:
     name: Full Test Suite
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: civicpulse
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: civicpulse_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     env:
       TRIAGE_PROVIDER: "simulated"
-      DATABASE_URL: "sqlite:///:memory:"
+      DATABASE_URL: "postgresql://civicpulse:password@localhost:5432/civicpulse_test"
+      REDIS_URL: "redis://localhost:6379/0"
       PYTHONPATH: "backend"
     steps:
       - name: Checkout code
@@ -34,6 +58,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
+          alembic upgrade head
           python -m pytest --cov=app --cov-fail-under=65 tests/
 
       - name: Set up Node.js 22
@@ -47,7 +72,7 @@ jobs:
         run: |
           cd frontend
           npm ci
-          npm run test -- --run
+          npm run test
 
   build-push:
     name: Build, SBOM & Push to GHCR

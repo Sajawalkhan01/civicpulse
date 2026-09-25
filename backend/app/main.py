@@ -31,7 +31,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CivicPulse", lifespan=lifespan)
 
-_cors_origins = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
+_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -45,21 +49,34 @@ app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
-async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def handle_validation_error(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     fields = [
-        {"field": ".".join(str(part) for part in err["loc"] if part != "body"), "message": err["msg"]}
+        {
+            "field": ".".join(str(part) for part in err["loc"] if part != "body"),
+            "message": err["msg"],
+        }
         for err in exc.errors()
     ]
-    return JSONResponse(status_code=400, content={"error": "validation_error", "fields": fields})
+    return JSONResponse(
+        status_code=400, content={"error": "validation_error", "fields": fields}
+    )
 
 
 @app.exception_handler(ComplaintNotFoundError)
-async def handle_complaint_not_found(request: Request, exc: ComplaintNotFoundError) -> JSONResponse:
-    return JSONResponse(status_code=404, content={"error": "not_found", "message": str(exc)})
+async def handle_complaint_not_found(
+    request: Request, exc: ComplaintNotFoundError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404, content={"error": "not_found", "message": str(exc)}
+    )
 
 
 @app.exception_handler(InvalidTransitionError)
-async def handle_invalid_transition(request: Request, exc: InvalidTransitionError) -> JSONResponse:
+async def handle_invalid_transition(
+    request: Request, exc: InvalidTransitionError
+) -> JSONResponse:
     return JSONResponse(
         status_code=409,
         content={

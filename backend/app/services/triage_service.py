@@ -6,14 +6,14 @@ import uuid
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.domain.models import TriageResult
 from app.domain.protocols import Cache, TriageProvider
 from app.providers.cache.factory import get_cache
+from app.providers.triage.base import RetryableTriageError
 from app.providers.triage.factory import get_triage_provider
 from app.providers.triage.rules import RuleBasedTriage
-from app.providers.triage.base import RetryableTriageError
 
 logger = logging.getLogger("civicpulse.triage")
 
@@ -66,7 +66,9 @@ class TriageService:
             return 0.0
         return self._cache_hits / self._cache_lookups
 
-    def triage(self, complaint_id: uuid.UUID, text: str, location: str) -> tuple[TriageResult, str, int]:
+    def triage(
+        self, complaint_id: uuid.UUID, text: str, location: str
+    ) -> tuple[TriageResult, str, int]:
         """Returns (result, triaged_by, latency_ms)."""
         content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -75,7 +77,12 @@ class TriageService:
         if cached is not None:
             self._cache_hits += 1
             result, triaged_by = cached
-            self._record_outcome(triaged_by, latency_ms=0, fell_back=triaged_by == "rules:fallback", cache_hit=True)
+            self._record_outcome(
+                triaged_by,
+                latency_ms=0,
+                fell_back=triaged_by == "rules:fallback",
+                cache_hit=True,
+            )
             return result, triaged_by, 0
 
         started = time.perf_counter()
@@ -97,7 +104,9 @@ class TriageService:
             fell_back = True
 
         latency_ms = int((time.perf_counter() - started) * 1000)
-        self._cache.set(content_hash, (result, triaged_by), ttl_seconds=_CACHE_TTL_SECONDS)
+        self._cache.set(
+            content_hash, (result, triaged_by), ttl_seconds=_CACHE_TTL_SECONDS
+        )
         self._record_outcome(triaged_by, latency_ms, fell_back, cache_hit=False)
         return result, triaged_by, latency_ms
 
@@ -125,9 +134,16 @@ class TriageService:
                     f"Triage provider {self._provider.name!r} exceeded {self._timeout_seconds}s"
                 ) from exc
 
-    def _record_outcome(self, provider: str, latency_ms: int, fell_back: bool, cache_hit: bool) -> None:
+    def _record_outcome(
+        self, provider: str, latency_ms: int, fell_back: bool, cache_hit: bool
+    ) -> None:
         self._outcomes.append(
-            TriageOutcome(provider=provider, latency_ms=latency_ms, fell_back=fell_back, cache_hit=cache_hit)
+            TriageOutcome(
+                provider=provider,
+                latency_ms=latency_ms,
+                fell_back=fell_back,
+                cache_hit=cache_hit,
+            )
         )
 
 

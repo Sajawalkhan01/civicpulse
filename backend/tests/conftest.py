@@ -12,12 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # singleton exactly once, at import time, from these env vars — a monkeypatch
 # fixture applied during a test would already be too late.
 os.environ["TRIAGE_PROVIDER"] = "simulated"
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.pop("GROQ_API_KEY", None)
 os.environ.pop("OLLAMA_BASE_URL", None)
 os.environ.pop("OLLAMA_MODEL", None)
 
 import uuid
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient

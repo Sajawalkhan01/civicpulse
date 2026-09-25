@@ -53,7 +53,9 @@ class RedisRateLimiter:
     ) -> None:
         self._client = client or get_redis_client()
         self._limit = (
-            limit if limit is not None else int(os.environ.get("RATE_LIMIT_PER_MINUTE", DEFAULT_LIMIT_PER_MINUTE))
+            limit
+            if limit is not None
+            else int(os.environ.get("RATE_LIMIT_PER_MINUTE", DEFAULT_LIMIT_PER_MINUTE))
         )
         self._window_seconds = window_seconds
 

@@ -7,14 +7,14 @@ from app.domain.models import TriageResult
 from app.domain.protocols import TriageProvider
 
 __all__ = [
+    "TRIAGE_SYSTEM_PROMPT",
+    "NonRetryableTriageError",
+    "RetryableTriageError",
     "TriageProvider",
     "TriageProviderError",
-    "RetryableTriageError",
-    "NonRetryableTriageError",
     "TriageValidationError",
-    "validate_triage_payload",
-    "TRIAGE_SYSTEM_PROMPT",
     "build_triage_user_prompt",
+    "validate_triage_payload",
 ]
 
 TRIAGE_SYSTEM_PROMPT = f"""You are a civic complaint triage classifier for CivicPulse.
@@ -75,10 +75,14 @@ def validate_triage_payload(raw: object) -> TriageResult:
         try:
             raw = json.loads(raw)
         except (json.JSONDecodeError, TypeError, UnicodeDecodeError) as exc:
-            raise TriageValidationError(f"Triage payload is not valid JSON: {exc}") from exc
+            raise TriageValidationError(
+                f"Triage payload is not valid JSON: {exc}"
+            ) from exc
 
     if not isinstance(raw, dict):
-        raise TriageValidationError(f"Triage payload must be a JSON object, got {type(raw).__name__}")
+        raise TriageValidationError(
+            f"Triage payload must be a JSON object, got {type(raw).__name__}"
+        )
 
     try:
         return TriageResult.model_validate(raw)
