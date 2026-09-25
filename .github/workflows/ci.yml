@@ -56,8 +56,8 @@ jobs:
     name: Test Backend (pytest >= 65% coverage)
     runs-on: ubuntu-latest
     env:
-      TRIAGE_PROVIDER: simulated
-      DATABASE_URL: sqlite:///:memory:
+      TRIAGE_PROVIDER: "simulated"
+      DATABASE_URL: "sqlite:///:memory:"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
