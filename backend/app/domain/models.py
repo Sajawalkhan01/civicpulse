@@ -14,9 +14,10 @@ class TriageResult(BaseModel):
 
 
 class ComplaintCreate(BaseModel):
-    text: str = Field(min_length=10, max_length=2000)
-    location: str = Field(min_length=3, max_length=200)
-    reporter_contact: str | None = None
+    # Validated inbound complaint request model
+    text: str = Field(..., min_length=10, max_length=2000, title="Complaint Text")
+    location: str = Field(..., min_length=3, max_length=200, title="Civic Location")
+    reporter_contact: str | None = Field(default=None, title="Contact Info")
 
 
 class ComplaintOut(BaseModel):
