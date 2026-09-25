@@ -138,13 +138,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up k3d cluster
-        uses: nolar/setup-k3d-action@v1
-        with:
-          version: v5.6.0
-          k3d-args: >-
-            --port 80:80@loadbalancer
-            --port 8000:8000@loadbalancer
+      - name: Install k3d and create cluster
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d cluster create civicpulse --port "80:80@loadbalancer" --port "8000:8000@loadbalancer" --wait
+
+      - name: Install VPA CRD
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd.yaml
 
       - name: Set up Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -159,10 +160,17 @@ jobs:
       - name: Apply Kubernetes manifests
         run: |
           kubectl apply -k k8s/overlays/prod
+          # Provide GHCR credentials in case packages are private
+          kubectl create secret docker-registry ghcr-creds \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            -n civicpulse --dry-run=client -o yaml | kubectl apply -f -
+          kubectl patch serviceaccount default -n civicpulse -p '{"imagePullSecrets": [{"name": "ghcr-creds"}]}'
 
       - name: Wait for PostgreSQL StatefulSet rollout
         run: |
-          kubectl rollout status statefulset/postgres -n civicpulse --timeout=120s
+          kubectl rollout status statefulset/postgres -n civicpulse --timeout=180s
 
       - name: Wait for Backend Deployment rollout
         run: |
