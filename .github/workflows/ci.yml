@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-type:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy
+          pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+
+      - name: Lint and typecheck backend
+        run: |
+          ruff check backend/app backend/tests
+          mypy backend/app
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint and typecheck frontend
+        run: |
+          cd frontend
+          npm run lint --if-present
+          npx tsc --noEmit
+
+  test-backend:
+    name: Test Backend (pytest >= 65% coverage)
+    runs-on: ubuntu-latest
+    env:
+      TRIAGE_PROVIDER: "simulated"
+      DATABASE_URL: "sqlite:///:memory:"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov fakeredis httpx sqlalchemy alembic
+          pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+
+      - name: Run pytest with coverage
+        run: |
+          cd backend
+          pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=65 tests/
+
+  test-frontend:
+    name: Test Frontend (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Vitest component tests
+        run: |
+          cd frontend
+          npm run test -- --run
+
+  build:
+    name: Build Images (No Push on PR)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: civicpulse-backend:test
+          load: true
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: civicpulse-frontend:test
+          load: true
+
+  scan:
+    name: Trivy Vulnerability Scan
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local images for scanning
+        run: |
+          docker build -t civicpulse-backend:scan ./backend
+          docker build -t civicpulse-frontend:scan ./frontend
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "civicpulse-backend:scan"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "civicpulse-frontend:scan"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+
+  manifests:
+    name: Validate Manifests (Kubeconform)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate production manifests
+        run: |
+          kustomize build k8s/overlays/prod | kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0
+
+  integration:
+    name: Docker Compose Integration Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create local .env
+        run: cp .env.example .env
+
+      - name: Start stack with Docker Compose
+        run: docker compose up -d --build
+
+      - name: Wait for backend readiness (/ready)
+        run: |
+          timeout 60s bash -c 'until curl -sf http://localhost:8000/ready; do sleep 2; done'
+
+      - name: Submit a complaint (POST)
+        id: post_complaint
+        run: |
+          RESPONSE=$(curl -sf -X POST http://localhost:8000/api/complaints \
+            -H "Content-Type: application/json" \
+            -d '{"text": "Integration test burst water pipeline flooding main road", "location": "Sector G-10, Islamabad", "reporter_contact": "0300-1112233"}')
+          echo "RESPONSE=$RESPONSE"
+          COMPLAINT_ID=$(echo "$RESPONSE" | jq -r '.id')
+          CATEGORY=$(echo "$RESPONSE" | jq -r '.category')
+          echo "COMPLAINT_ID=$COMPLAINT_ID" >> $GITHUB_ENV
+          echo "CATEGORY=$CATEGORY" >> $GITHUB_ENV
+          if [ "$CATEGORY" != "water" ]; then
+            echo "Expected water category, got $CATEGORY"
+            exit 1
+          fi
+
+      - name: Retrieve complaint (GET) and assert
+        run: |
+          curl -sf http://localhost:8000/api/complaints/${{ env.COMPLAINT_ID }} | jq .
+
+      - name: Check X-Cache goes MISS then HIT on /api/stats
+        run: |
+          # First fetch should be MISS
+          CACHE_1=$(curl -sI http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
+          echo "First response cache header: $CACHE_1"
+          
+          # Second fetch should be HIT
+          CACHE_2=$(curl -sI http://localhost:8000/api/stats | grep -i x-cache | tr -d '\r\n')
+          echo "Second response cache header: $CACHE_2"
+          echo "$CACHE_2" | grep -i "HIT"
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker compose down -v
