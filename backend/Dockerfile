@@ -14,7 +14,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip uninstall -y setuptools
+    pip uninstall -y setuptools pip
 
 # Stage 2: Final runtime image
 FROM python:3.12-slim AS runtime
