@@ -171,6 +171,10 @@ jobs:
           docker build -t civicpulse-backend:scan ./backend
           docker build -t civicpulse-frontend:scan ./frontend
 
+      - name: TEMP diagnostic - locate urllib3 in backend image
+        run: |
+          docker run --rm --entrypoint sh civicpulse-backend:scan -c "find / -iname 'urllib3*' -not -path '/proc/*' 2>/dev/null; echo ---; /opt/venv/bin/python -m pip list 2>/dev/null | grep -i urllib3 || echo 'not in venv'"
+
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
