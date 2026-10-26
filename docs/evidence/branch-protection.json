@@ -1,0 +1,21 @@
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "Lint & Type Check",
+      "Test Backend (pytest >= 65% coverage)",
+      "Test Frontend (Vitest)",
+      "Build Images (No Push on PR)",
+      "Trivy Vulnerability Scan",
+      "Validate Manifests (Kubeconform)",
+      "Docker Compose Integration Smoke Test"
+    ]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
